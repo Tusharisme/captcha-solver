@@ -1,0 +1,223 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Captcha Solver App</title>
+    <style>
+        /* Basic Reset & Body Styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Aligns content to the top */
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* Main Container Styling */
+        main {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        /* Heading Styling */
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+        }
+
+        /* Captcha Area Styling */
+        #captcha-area {
+            margin-bottom: 30px;
+        }
+
+        /* Image Styling */
+        #captchaImage {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: block; /* Removes extra space below image */
+            margin: 0 auto 20px auto;
+            background-color: #f9f9f9; /* Background for placeholder */
+            min-height: 80px; /* Ensures placeholder has some visible height */
+        }
+
+        /* Input & Button Styling */
+        #captcha-solution-input {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+            font-size: 0.95em;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 22px); /* Account for padding and border */
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        /* Feedback Area Styling */
+        #feedback {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            min-height: 20px; /* Reserve space for messages */
+            text-align: left; /* Align text within the feedback box */
+        }
+        #feedback.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        #feedback.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Footer Styling */
+        footer {
+            margin-top: 30px;
+            font-size: 0.8em;
+            color: #888;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            main {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            input[type="text"], button {
+                font-size: 0.9em;
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Captcha Solver</h1>
+
+        <section id="captcha-area">
+            <p>Please enter the text shown in the image below:</p>
+            <img id="captchaImage" src="" alt="Captcha image to solve">
+            
+            <div id="captcha-solution-input">
+                <label for="captchaSolution">Your solution:</label>
+                <input type="text" id="captchaSolution" aria-live="polite" placeholder="Type captcha here">
+                <button id="submitSolution">Submit Solution</button>
+            </div>
+
+            <div id="feedback" aria-live="polite" aria-atomic="true"></div>
+        </section>
+
+        <footer>
+            <p>&copy; 2023 Captcha Solver App. All rights reserved. (MIT License)</p>
+        </footer>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const captchaImage = document.getElementById('captchaImage');
+            const captchaSolutionInput = document.getElementById('captchaSolution');
+            const submitButton = document.getElementById('submitSolution');
+            const feedbackDiv = document.getElementById('feedback');
+
+            // 1. Determine image source based on URL parameter or default
+            const urlParams = new URLSearchParams(window.location.search);
+            const imageUrlFromParam = urlParams.get('url');
+            const defaultImagePath = './input/sample.png';
+            
+            // Set the image source; prioritize URL parameter
+            captchaImage.src = imageUrlFromParam || defaultImagePath;
+            captchaImage.alt = imageUrlFromParam 
+                                ? `Captcha image loaded from ${imageUrlFromParam}` 
+                                : `Default captcha image from ${defaultImagePath}`;
+
+            // 2. Safe fallback for image loading errors
+            captchaImage.onerror = () => {
+                console.error('Failed to load captcha image. Falling back to placeholder.');
+                // A simple SVG placeholder as a Base64 data URI
+                const placeholderSvgBase64 = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDMwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3QgeD0iMCIyeT0iMCIgd2lkdGg9IjMwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNlMGUwZTAiLz4KICA8dGV4dCB4PSIxNTAiIHk9IjQ1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2NjY2NjYiPkhhcHB5IENhcHRjaGEhPC90ZXh0PgogIDx0ZXh0IHg9IjE1MCIgeT0iNjUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzY2NjY2NiI+SW1hZ2UgZmFpbGVkIHRvIGxvYWQuPC90ZVh0Pgo8L3N2Z2c+';
+                
+                captchaImage.src = placeholderSvgBase64;
+                captchaImage.alt = 'Captcha image failed to load. Displaying a placeholder.';
+                
+                feedbackDiv.textContent = 'Failed to load captcha image. Please refresh or check the URL.';
+                feedbackDiv.className = 'error';
+            };
+
+            // 3. Handle submission of the captcha solution (client-side only)
+            // This app is purely client-side, so actual captcha validation isn't possible.
+            // This function simply displays the user's input as the "solved" text.
+            const handleSubmit = () => {
+                const solution = captchaSolutionInput.value.trim();
+                feedbackDiv.classList.remove('success', 'error'); // Clear previous states
+
+                if (solution) {
+                    feedbackDiv.textContent = `You submitted: "${solution}". (No backend validation performed)`;
+                    feedbackDiv.classList.add('success');
+                    // In a real application, 'solution' would be sent to a server for verification.
+                } else {
+                    feedbackDiv.textContent = 'Please enter your solution for the captcha.';
+                    feedbackDiv.classList.add('error');
+                }
+            };
+
+            // Event Listeners for submission
+            submitButton.addEventListener('click', handleSubmit);
+            captchaSolutionInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    handleSubmit();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+```
